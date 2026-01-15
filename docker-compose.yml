@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  umimatch:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - SQLITE_DB_PATH=/app/backend/database.db
+    volumes:
+      - umimatch_db:/app/backend
+    restart: unless-stopped
+
+volumes:
+  umimatch_db:
