@@ -23,6 +23,21 @@ class Settings {
               <label>City</label>
               <input type="text" id="city" value="${user.city || ''}" placeholder="e.g., New York">
             </div>
+
+            <!-- ADD PICTURES BUTTON HERE -->
+            <div class="settings-group">
+              <label>Add Pictures</label>
+              <button id="add-pictures-btn" class="btn btn-add-pictures">
+                📸 Add Pictures
+              </button>
+              <input 
+                type="file" 
+                id="file-input" 
+                multiple 
+                accept="image/*" 
+                style="display: none;"
+              >
+            </div>
           </div>
 
           <div class="settings-section">
@@ -96,6 +111,47 @@ class Settings {
     if (maxDistanceInput) {
       maxDistanceInput.addEventListener('input', () => {
         distanceValue.textContent = maxDistanceInput.value;
+      });
+    }
+
+    // ADD PICTURES BUTTON LISTENER
+    const addPicturesBtn = document.getElementById('add-pictures-btn');
+    const fileInput = document.getElementById('file-input');
+
+    if (addPicturesBtn) {
+      addPicturesBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener('change', async (e) => {
+        const files = e.target.files;
+        if (files.length === 0) return;
+
+        const formData = new FormData();
+        for (let file of files) {
+          formData.append('pictures', file);
+        }
+
+        try {
+          const response = await fetch('/api/users/upload-pictures', {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            }
+          });
+
+          if (response.ok) {
+            alert('✅ Pictures uploaded successfully!');
+          } else {
+            alert('❌ Failed to upload pictures');
+          }
+        } catch (error) {
+          console.error('Error uploading pictures:', error);
+          alert('❌ Error uploading pictures');
+        }
       });
     }
   }

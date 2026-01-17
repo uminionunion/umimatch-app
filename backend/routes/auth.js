@@ -7,27 +7,59 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, phone } = req.body;
+    const { username, password, phone, email, birthday } = req.body;
 
-    if (!username || !password || !phone) {
+    // CHECK IF ALL FIELDS ARE FILLED
+    if (!username || !password || !phone || !email || !birthday) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    await dbRun(
-      `INSERT INTO users (username, password, phone, gender, interested_in)
-       VALUES (?, ?, ?, ?, ?)`,
-      [username, hashedPassword, phone, 'Male', 'Female']
+    // CHECK IF USER ALREADY EXISTS
+    const existingUser = await dbGet(
+      `SELECT id FROM users WHERE username = ? OR email = ?`,
+      [username, email]
     );
 
-    // Create empty profile
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username or email already exists' });
+    }
+
+    // CALCULATE AGE FROM BIRTHDAY
+    const birthDate = new Date(birthday);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    // CHECK IF THEY'RE 18+
+    if (age < 18) {
+      return res.status(400).json({ error: 'You must be 18 or older to register' });
+    }
+
+    // HASH PASSWORD
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // GET CURRENT DATE/TIME FOR SIGNUP
+    const signupDate = new Date().toISOString();
+
+    // INSERT USER WITH EMAIL, BIRTHDAY, AGE, AND SIGNUP DATE
+    await dbRun(
+      `INSERT INTO users (username, password, phone, email, birthday, age, gender, interested_in, signupDate)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [username, hashedPassword, phone, email, birthday, age, 'Male', 'Female', signupDate]
+    );
+
+    // CREATE EMPTY PROFILE
     const user = await dbGet(`SELECT id FROM users WHERE username = ?`, [username]);
     await dbRun(
       `INSERT INTO profiles (user_id) VALUES (?)`,
       [user.id]
     );
 
+    // CREATE JWT TOKEN
     const token = jwt.sign({ userId: user.id }, 'secret_key', { expiresIn: '7d' });
 
     res.json({ 
@@ -59,6 +91,13 @@ router.post('/login', async (req, res) => {
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    // UPDATE LAST LOGIN TIME
+    const lastLogin = new Date().toISOString();
+    await dbRun(
+      `UPDATE users SET lastLogin = ? WHERE id = ?`,
+      [lastLogin, user.id]
+    );
 
     const token = jwt.sign({ userId: user.id }, 'secret_key', { expiresIn: '7d' });
 
