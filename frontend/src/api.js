@@ -10,14 +10,14 @@ class API {
   }
 
   // Auth
-  static async register(username, password, phone) {
-    const response = await fetch(`${this.baseURL}/auth/register`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ username, password, phone })
-    });
-    return response.json();
-  }
+static async register(username, password, phone, email, birthday) {
+  const response = await fetch(`${this.baseURL}/auth/register`, {
+    method: 'POST',
+    headers: this.getHeaders(),
+    body: JSON.stringify({ username, password, phone, email, birthday })
+  });
+  return response.json();
+}
 
   static async login(username, password) {
     const response = await fetch(`${this.baseURL}/auth/login`, {
